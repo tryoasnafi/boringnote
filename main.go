@@ -14,9 +14,9 @@ import (
 type STATUS uint8
 
 const (
-	TODO STATUS = iota
-	DOING
+	DOING STATUS = iota
 	ONTEST
+	TODO
 	DONE
 )
 
@@ -98,7 +98,7 @@ func (t *Tasks) list(showDeleted bool) {
 	}
 
 	taskRows := make([]table.Row, 100)
-	tableRow := table.Row{"ID", "Task", "Status", "Created At", "Updated At"}
+	tableRow := table.Row{"ID", "Task", "Status", "P", "Created At", "Updated At"}
 
 	if showDeleted {
 		tableRow = append(tableRow, "Deleted At")
@@ -109,7 +109,7 @@ func (t *Tasks) list(showDeleted bool) {
 			if !showDeleted && task.DeletedAt != 0 {
 				continue
 			}
-			taskRows = append(taskRows, table.Row{i, task.Name, getTaskStatus(task.Status), unixToTime(task.CreatedAt), unixToTime(task.UpdatedAt)})
+			taskRows = append(taskRows, table.Row{i, task.Name, getTaskStatus(task.Status), task.Status, unixToTime(task.CreatedAt), unixToTime(task.UpdatedAt)})
 		}
 	} else {
 		for i, task := range *t {
@@ -117,7 +117,7 @@ func (t *Tasks) list(showDeleted bool) {
 			if task.DeletedAt != 0 {
 				deleteTime = unixToTime(task.DeletedAt)
 			}
-			taskRows = append(taskRows, table.Row{i, task.Name, getTaskStatus(task.Status), unixToTime(task.CreatedAt), unixToTime(task.UpdatedAt), deleteTime})
+			taskRows = append(taskRows, table.Row{i, task.Name, getTaskStatus(task.Status), task.Status, unixToTime(task.CreatedAt), unixToTime(task.UpdatedAt), deleteTime})
 		}
 	}
 
@@ -127,7 +127,8 @@ func (t *Tasks) list(showDeleted bool) {
 
 	tab.AppendRows(taskRows)
 	tab.SortBy([]table.SortBy{
-		{Name: "ID", Mode: table.Dsc},
+		{Name: "P", Mode: table.AscNumeric},
+		{Name: "ID", Mode: table.AscNumeric},
 	})
 	tab.SetColumnConfigs([]table.ColumnConfig{
 		{Name: "Task", WidthMax: 40},
