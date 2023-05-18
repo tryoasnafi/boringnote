@@ -91,27 +91,43 @@ func unixToTime(unix int64) string {
 	return time.Unix(unix, 0).Local().Format("2006-01-02 15:04:05")
 }
 
-func (t *Tasks) list() {
+func (t *Tasks) list(showDeleted bool) {
 	if (len(*t)) == 0 {
 		fmt.Println("No tasks")
 		return
 	}
 
 	taskRows := make([]table.Row, 100)
+	tableRow := table.Row{"ID", "Task", "Status", "Created At", "Updated At"}
 
-	for i, task := range *t {
-		if task.DeletedAt != 0 {
-			continue
+	if showDeleted {
+		tableRow = append(tableRow, "Deleted At")
+	}
+
+	if !showDeleted {
+		for i, task := range *t {
+			if !showDeleted && task.DeletedAt != 0 {
+				continue
+			}
+			taskRows = append(taskRows, table.Row{i, task.Name, getTaskStatus(task.Status), unixToTime(task.CreatedAt), unixToTime(task.UpdatedAt)})
 		}
-		taskRows = append(taskRows, table.Row{i, task.Name, getTaskStatus(task.Status), unixToTime(task.CreatedAt), unixToTime(task.UpdatedAt)})
+	} else {
+		for i, task := range *t {
+			var deleteTime string
+			if task.DeletedAt != 0 {
+				deleteTime = unixToTime(task.DeletedAt)
+			}
+			taskRows = append(taskRows, table.Row{i, task.Name, getTaskStatus(task.Status), unixToTime(task.CreatedAt), unixToTime(task.UpdatedAt), deleteTime})
+		}
 	}
 
 	tab := table.NewWriter()
 	tab.SetOutputMirror(os.Stdout)
-	tab.AppendHeader(table.Row{"ID", "Task", "Status", "Created At", "Updated At"})
+	tab.AppendHeader(tableRow)
+
 	tab.AppendRows(taskRows)
 	tab.SortBy([]table.SortBy{
-		{Name: "ID", Mode: table.Asc},
+		{Name: "ID", Mode: table.Dsc},
 	})
 	tab.SetColumnConfigs([]table.ColumnConfig{
 		{Name: "Task", WidthMax: 40},
@@ -121,9 +137,10 @@ func (t *Tasks) list() {
 
 func printHelp() {
 	fmt.Println("Usage: ")
-	fmt.Println("  -a <task> \t - add new task")
+	fmt.Println("  -n <task> \t - add new task")
 	fmt.Println("  -d <id> \t - delete a task")
 	fmt.Println("  -l \t\t - show the tasks")
+	fmt.Println("  -la \t\t - show the tasks with deleted tasks")
 	fmt.Println("  -h \t\t - help")
 	os.Exit(0)
 }
@@ -145,10 +162,12 @@ func main() {
 	}
 
 	switch os.Args[1] {
-	case "-a":
+	case "-n":
 		tasks.add(strings.Join(os.Args[2:], " "))
 	case "-l":
-		tasks.list()
+		tasks.list(false)
+	case "-la":
+		tasks.list(true)
 	case "-d":
 		for i := 2; i < len(os.Args); i++ {
 			ai, _ := strconv.Atoi(os.Args[i])
