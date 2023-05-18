@@ -62,7 +62,12 @@ func (t *Tasks) add(name string) {
 
 func (t *Tasks) remove(id uint16) {
 	value, exists := (*t)[id]
+
 	if exists && value.DeletedAt == 0 {
+		if value.Status == DOING || value.Status == ONTEST {
+			fmt.Printf("Task [%d] \"%s\" still on progress \n", id, value.Name)
+			return
+		}
 		value.DeletedAt = time.Now().Unix()
 		(*t)[id] = value
 		saveTasks(TASK_FILENAME, *t)
